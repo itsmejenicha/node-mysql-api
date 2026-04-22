@@ -1,0 +1,19 @@
+{
+    "database": {
+        "host": "127.0.0.1",
+        "port": 3307,
+        "user": "root",
+        "password": "",
+        "database": "mysql_api"
+    },
+    "secret": "SUPER_SECRET_KEY_REPLACE_ME_IN_PRODUCTION",
+    "emailFrom": "info@my-node-api.com",
+   "smtpOptions": {
+  "host": "smtp.ethereal.email",
+  "port": 587,
+  "auth": {
+    "user": "bonnie62@ethereal.email",
+    "pass": "3yRJkvBKPR5MVukF4G"
+  }
+}
+}
