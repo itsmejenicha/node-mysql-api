@@ -1,8 +1,21 @@
 import { expressjwt } from 'express-jwt';
-import config from '../config.json';
 import db from '../_helpers/db';
 
-const { secret } = config;
+// Helper function to load config file (only in non-production)
+const loadFileConfig = () => {
+    try {
+        return require('../config.json');
+    } catch {
+        return {};
+    }
+};
+
+const fileConfig = process.env.NODE_ENV === 'production' ? {} : loadFileConfig();
+const secret = process.env.JWT_SECRET || fileConfig.secret;
+
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required in production');
+}
 
 export default function authorize(roles: any = []) {
     // make sure roles is always an array

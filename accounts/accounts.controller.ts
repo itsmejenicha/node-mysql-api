@@ -188,15 +188,15 @@ function updateSchema(req: any, res: any, next: any) {
         firstName: Joi.string().required(),
         lastName: Joi.string().required(),
         email: Joi.string().email().required(),
-        password: Joi.string().min(6).required(),
-        confirmPassword: Joi.string().valid(Joi.ref('password')).required()
+        password: Joi.string().min(6).empty(''),
+        confirmPassword: Joi.string().valid(Joi.ref('password')).empty('')
     };
     
     if (req.user.role === Role.Admin) {
         schemaRules.role = Joi.string().valid(Role.Admin, Role.User).empty('');
     }
 
-    const schema = Joi.object(schemaRules).with('password','confirmPassword');
+    const schema = Joi.object(schemaRules).with('password', 'confirmPassword');
     validateRequest(req, next, schema);
 }
 
@@ -219,10 +219,13 @@ function _delete(req: any, res: any, next: any) {
         .catch(next);
 }
 
+// UPDATED: Cookie options with environment variables
 function setTokenCookie(res: any, token: any) {
-    const cookieOptions = {
+    const cookieOptions: any = {
         httpOnly: true,
-        expires: new Date(Date.now() + 7*24*60*60*1000)
+        expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        sameSite: process.env.COOKIE_SAMESITE || 'lax',
+        secure: process.env.COOKIE_SECURE === 'true'
     };
     res.cookie('refreshToken', token, cookieOptions);
 }

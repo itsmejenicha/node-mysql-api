@@ -4,7 +4,7 @@ import cors from 'cors';
 
 import errorHandler from './_middleware/error-handler';
 import accountsController from './accounts/accounts.controller';
-import swaggerDocs from './_helpers/swagger';
+//import swaggerDocs from './_helpers/swagger';
 
 const app = express();
 
@@ -13,14 +13,19 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
+// CORS configuration
+const corsOrigin = process.env.CORS_ORIGIN;
+
 app.use(cors({
-    origin: true,
+    origin: process.env.NODE_ENV === 'production'
+        ? (corsOrigin ? corsOrigin.split(',').map(x => x.trim()) : false)
+        : (origin, callback) => callback(null, true),
     credentials: true
 }));
 
 // routes
 app.use('/accounts', accountsController);
-app.use('/api-docs', swaggerDocs);
+//app.use('/api-docs', swaggerDocs);
 
 // global error handler
 app.use(errorHandler);
@@ -32,4 +37,8 @@ const port = process.env.NODE_ENV === 'production'
 
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    if (process.env.NODE_ENV === 'production' && corsOrigin) {
+        console.log(`CORS allowed origins: ${corsOrigin}`);
+    }
 });
