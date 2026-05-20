@@ -6,33 +6,18 @@ import refreshTokenModel from '../accounts/refresh-token.model';
 const db: any = {};
 export default db;
 
-// Load config file only in development
-const loadFileConfig = () => {
-    try {
-        return require('../config.json');
-    } catch {
-        return {};
-    }
-};
-
-// IMPORTANT FIX: correct structure access
-const fileConfig = process.env.NODE_ENV === 'production'
-    ? {}
-    : loadFileConfig();
-
+// =========================
+// DATABASE CONFIG (ENV ONLY)
+// =========================
 function getDatabaseConfig() {
-    // FIX: config is inside "database"
-    const config = fileConfig.database || {};
+    const host = process.env.DB_HOST;
+    const port = Number(process.env.DB_PORT || 4000);
+    const user = process.env.DB_USER;
+    const password = process.env.DB_PASSWORD;
+    const database = process.env.DB_NAME;
 
-    const host = process.env.DB_HOST || config.host;
-    const port = process.env.DB_PORT
-        ? parseInt(process.env.DB_PORT, 10)
-        : (config.port || 4000);
-
-    const user = process.env.DB_USER || config.user;
-    const password = process.env.DB_PASSWORD || config.password;
-    const database = process.env.DB_NAME || config.database;
-    const ssl = process.env.DB_SSL === 'true' || config.ssl === true;
+    // TiDB requires SSL
+    const ssl = process.env.DB_SSL === 'true';
 
     console.log("📦 DB CONFIG LOADED:", {
         host,
@@ -44,18 +29,25 @@ function getDatabaseConfig() {
 
     if (!host) throw new Error("DB_HOST is missing");
     if (!user) throw new Error("DB_USER is missing");
+    if (!password) throw new Error("DB_PASSWORD is missing");
     if (!database) throw new Error("DB_NAME is missing");
 
     return { host, port, user, password, database, ssl };
 }
 
+// =========================
+// INITIALIZE DATABASE
+// =========================
 export async function initialize() {
     const { host, port, user, password, database, ssl } = getDatabaseConfig();
 
     console.log(`📡 Connecting to database at ${host}:${port}...`);
 
-    // Only create DB locally (skip in production)
-    if (process.env.NODE_ENV !== 'production' && (host === 'localhost' || host === '127.0.0.1')) {
+    // OPTIONAL: Create DB locally only
+    if (
+        process.env.NODE_ENV !== 'production' &&
+        (host === 'localhost' || host === '127.0.0.1')
+    ) {
         try {
             const connection = await mysql.createConnection({
                 host,
@@ -64,29 +56,33 @@ export async function initialize() {
                 password
             });
 
-            await connection.query(`CREATE DATABASE IF NOT EXISTS \`${database}\`;`);
-            await connection.end();
+            await connection.query(
+                `CREATE DATABASE IF NOT EXISTS \`${database}\`;`
+            );
 
+            await connection.end();
             console.log('✅ Local database ensured');
         } catch (err: any) {
             console.log('⚠️ DB creation skipped:', err.message);
         }
     }
 
-    // Sequelize connection (TiDB Cloud FIXED)
+    // =========================
+    // SEQUELIZE CONNECTION (FIXED FOR TIDB)
+    // =========================
     const sequelize = new Sequelize(database, user, password, {
         host,
         port,
         dialect: 'mysql',
 
-        dialectOptions: ssl
-            ? {
-                  ssl: {
-                      minVersion: 'TLSv1.2',
+        dialectOptions: {
+            ssl: ssl
+                ? {
+                      require: true,
                       rejectUnauthorized: false
                   }
-              }
-            : {},
+                : undefined
+        },
 
         logging: false,
 
@@ -106,14 +102,18 @@ export async function initialize() {
         throw error;
     }
 
-    // Models
+    // =========================
+    // MODELS
+    // =========================
     db.Account = accountModel(sequelize);
     db.RefreshToken = refreshTokenModel(sequelize);
 
     db.Account.hasMany(db.RefreshToken, { onDelete: 'CASCADE' });
     db.RefreshToken.belongsTo(db.Account);
 
-    // Sync database - ONLY in development, NEVER in production
+    // =========================
+    // SYNC (DEV ONLY)
+    // =========================
     if (process.env.NODE_ENV !== 'production') {
         await sequelize.sync({ alter: false });
         console.log('✅ Database schema synced');

@@ -4,7 +4,7 @@
     "module": "commonjs",
     "lib": ["es2018"],
     "outDir": "./dist",
-    "rootDir": "./",
+    "rootDir": ".",
     "strict": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
@@ -12,6 +12,6 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node"]
   },
-  "include": ["**/*.ts"],
+  "include": ["server.ts", "**/*.ts"],
   "exclude": ["node_modules"]
 }
