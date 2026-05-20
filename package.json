@@ -3,12 +3,10 @@
   "version": "1.0.0",
   "description": "Node.js MySQL API with JWT authentication",
   "main": "dist/server.js",
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/server.js",
-    "start:dev": "nodemon --exec ts-node ./server.ts",
-    "clean": "rimraf dist",
-    "prebuild": "npm run clean"
+ "scripts": {
+  "build": "rm -rf dist && tsc",
+  "start": "node dist/server.js",
+  "start:dev": "nodemon --exec ts-node ./server.ts"
   },
   "keywords": [
     "authentication",
