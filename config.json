@@ -11,8 +11,8 @@
     "emailFrom": "your_email@gmail.com",
     "smtpOptions": {
         "host": "smtp-relay.brevo.com",
-        "port": 465,
-        "secure": true,
+        "port": 587,
+        "secure": false,
         "auth": {
             "user": "YOUR_BREVO_SMTP_USER",
             "pass": "YOUR_BREVO_SMTP_PASSWORD"
