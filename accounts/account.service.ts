@@ -98,21 +98,42 @@ async function revokeToken({ token, ipAddress }: any) {
 // ---------------- REGISTER ----------------
 
 async function register(params: any, origin: any) {
-    if (await db.Account.findOne({ where: { email: params.email } })) {
-        return await sendAlreadyRegisteredEmail(params.email, origin);
+    console.log('🔵 1. Register function started for:', params.email);
+    
+    try {
+        // Check if email exists
+        console.log('🔵 2. Checking if email exists...');
+        const existingAccount = await db.Account.findOne({ where: { email: params.email } });
+        
+        if (existingAccount) {
+            console.log('🔵 3. Email already exists, sending notification');
+            return await sendAlreadyRegisteredEmail(params.email, origin);
+        }
+
+        console.log('🔵 4. Building new account...');
+        const account = db.Account.build(params);
+
+        const isFirstAccount = (await db.Account.count()) === 0;
+        account.role = isFirstAccount ? Role.Admin : Role.User;
+        account.verificationToken = randomTokenString();
+        
+        console.log('🔵 5. Hashing password...');
+        account.passwordHash = await hash(params.password);
+
+        console.log('🔵 6. Saving account to database...');
+        await account.save();
+        console.log('✅ Account saved! ID:', account.id);
+
+        console.log('🔵 7. Sending verification email...');
+        await sendVerificationEmail(account, origin);
+        console.log('✅ Verification email sent');
+
+        return { success: true };
+        
+    } catch (err) {
+        console.error('❌ REGISTRATION ERROR:', err);
+        throw err;
     }
-
-    const account = db.Account.build(params);
-
-    const isFirstAccount = (await db.Account.count()) === 0;
-    account.role = isFirstAccount ? Role.Admin : Role.User;
-
-    account.verificationToken = randomTokenString();
-    account.passwordHash = await hash(params.password);
-
-    await account.save();
-
-    await sendVerificationEmail(account, origin);
 }
 
 async function verifyEmail({ token }: any) {

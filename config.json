@@ -2,19 +2,23 @@
     "database": {
         "host": "gateway01.ap-southeast-1.prod.aws.tidbcloud.com",
         "port": 4000,
-        "user": "2zeqSRgU1sf6ojx.root",
-        "password": "kXlp6defl18OlcOf",
+        "user": "YOUR_DATABASE_USER",
+        "password": "YOUR_DATABASE_PASSWORD",
         "database": "test",
         "ssl": true
     },
-    "secret": "SUPER_SECRET_KEY_REPLACE_ME_IN_PRODUCTION",
-    "emailFrom": "info@my-node-api.com",
+    "secret": "YOUR_JWT_SECRET",
+    "emailFrom": "your_email@gmail.com",
     "smtpOptions": {
-        "host": "smtp.ethereal.email",
+        "host": "smtp-relay.brevo.com",
         "port": 587,
+        "secure": false,
         "auth": {
-            "user": "bonnie62@ethereal.email",
-            "pass": "3yRJkvBKPR5MVukF4G"
+            "user": "YOUR_BREVO_SMTP_USER",
+            "pass": "YOUR_BREVO_SMTP_PASSWORD"
+        },
+        "tls": {
+            "rejectUnauthorized": false
         }
     }
 }

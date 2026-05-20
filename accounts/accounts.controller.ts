@@ -44,12 +44,21 @@ function authenticate(req: any, res: any, next: any) {
 function refreshToken(req: any, res: any, next: any) {
     const token = req.cookies.refreshToken;
     const ipAddress = req.ip;
+    
+    // If no token exists, return early (don't crash)
+    if (!token) {
+        return res.status(401).json({ message: 'No refresh token provided' });
+    }
+    
     accountService.refreshToken({ token, ipAddress })
         .then(({ refreshToken, ...account }: any) => {
             setTokenCookie(res, refreshToken);
             res.json(account);
         })
-        .catch(next);
+        .catch((err) => {
+            console.error('Refresh token error:', err);
+            res.status(401).json({ message: 'Invalid or expired refresh token' });
+        });
 }
 
 function revokeTokenSchema(req: any, res: any, next: any) {
@@ -88,7 +97,13 @@ function registerSchema(req: any, res: any, next: any) {
 }
 
 function register(req: any, res: any, next: any) {
-    accountService.register(req.body, req.get('origin'))
+    // Get origin from request headers, or fallback to default
+    const origin = req.get('origin') || req.get('referer') || 'http://localhost:4200';
+    // Remove trailing slash if present
+    const cleanOrigin = origin.replace(/\/$/, '');
+    console.log('📧 Registration origin:', cleanOrigin);
+    
+    accountService.register(req.body, cleanOrigin)
         .then(() => res.json({ message: 'Registration successful, please check your email for verification instructions' }))
         .catch(next);
 }
@@ -114,8 +129,12 @@ function forgotPasswordSchema(req: any, res: any, next: any) {
 }
 
 function forgotPassword(req: any, res: any, next: any) {
-    accountService.forgotPassword(req.body, req.get('origin'))
-        .then(() => res.json({ message: 'Please check your email for password reset instructions '}))
+    // Get origin from request headers, or fallback to default
+    const origin = req.get('origin') || req.get('referer') || 'http://localhost:4200';
+    const cleanOrigin = origin.replace(/\/$/, '');
+    
+    accountService.forgotPassword(req.body, cleanOrigin)
+        .then(() => res.json({ message: 'Please check your email for password reset instructions' }))
         .catch(next);
 }
 
@@ -219,7 +238,7 @@ function _delete(req: any, res: any, next: any) {
         .catch(next);
 }
 
-// UPDATED: Cookie options with environment variables
+// Cookie options with environment variables
 function setTokenCookie(res: any, token: any) {
     const cookieOptions: any = {
         httpOnly: true,

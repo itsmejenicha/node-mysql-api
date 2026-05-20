@@ -54,8 +54,8 @@ export async function initialize() {
 
     console.log(`📡 Connecting to database at ${host}:${port}...`);
 
-    // Only create DB locally
-    if (host === 'localhost' || host === '127.0.0.1') {
+    // Only create DB locally (skip in production)
+    if (process.env.NODE_ENV !== 'production' && (host === 'localhost' || host === '127.0.0.1')) {
         try {
             const connection = await mysql.createConnection({
                 host,
@@ -83,7 +83,7 @@ export async function initialize() {
             ? {
                   ssl: {
                       minVersion: 'TLSv1.2',
-                      rejectUnauthorized: true
+                      rejectUnauthorized: false
                   }
               }
             : {},
@@ -113,9 +113,12 @@ export async function initialize() {
     db.Account.hasMany(db.RefreshToken, { onDelete: 'CASCADE' });
     db.RefreshToken.belongsTo(db.Account);
 
+    // Sync database - ONLY in development, NEVER in production
     if (process.env.NODE_ENV !== 'production') {
         await sequelize.sync({ alter: false });
         console.log('✅ Database schema synced');
+    } else {
+        console.log('⚠️ Database schema sync skipped (production mode)');
     }
 
     db.sequelize = sequelize;

@@ -23,27 +23,10 @@ function getEmailFrom() {
     return 'no-reply@example.com';
 }
 
-// Try Resend first (preferred for production), fallback to SMTP
-async function sendWithResend({ to, subject, html, from }: any) {
-    if (!process.env.RESEND_API_KEY) {
-        return null;
-    }
-    
-    const resend = new (require('resend').Resend)(process.env.RESEND_API_KEY);
-    
-    return await resend.emails.send({
-        from: from || getEmailFrom(),
-        to,
-        subject,
-        html
-    });
-}
-
-async function sendWithSMTP({ to, subject, html, from }: any) {
-    let smtpOptions;
-    
+function getSmtpOptions() {
+    // Check environment variables first (for production)
     if (process.env.SMTP_HOST) {
-        smtpOptions = {
+        const options: any = {
             host: process.env.SMTP_HOST,
             port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587,
             secure: process.env.SMTP_SECURE === 'true',
@@ -52,31 +35,54 @@ async function sendWithSMTP({ to, subject, html, from }: any) {
                 pass: process.env.SMTP_PASS
             } : undefined
         };
-    } else if (fileConfig.smtpOptions) {
-        smtpOptions = fileConfig.smtpOptions;
-    } else {
-        throw new Error('No email configuration found (Resend or SMTP)');
+        
+        // Add TLS to ignore self-signed certificate errors (development only)
+        if (process.env.NODE_ENV !== 'production') {
+            options.tls = { rejectUnauthorized: false };
+        }
+        
+        return options;
     }
     
-    const transporter = nodemailer.createTransport(smtpOptions);
+    // Fall back to config.json (for development)
+    if (fileConfig.smtpOptions) {
+        const options = { ...fileConfig.smtpOptions };
+        
+        // Add TLS to ignore self-signed certificate errors (development only)
+        if (process.env.NODE_ENV !== 'production' && !options.tls) {
+            options.tls = { rejectUnauthorized: false };
+        }
+        
+        return options;
+    }
     
-    await transporter.sendMail({
-        from: from || getEmailFrom(),
-        to,
-        subject,
-        html
-    });
+    throw new Error('No SMTP configuration found');
 }
 
 export default async function sendEmail({ to, subject, html, from }: any) {
-    // Try Resend first (preferred for production)
-    if (process.env.RESEND_API_KEY) {
-        const result = await sendWithResend({ to, subject, html, from });
-        if (result && !result.error) {
-            return result;
-        }
-    }
+    console.log('📧 Sending email to:', to);
+    console.log('📧 Subject:', subject);
     
-    // Fallback to SMTP
-    await sendWithSMTP({ to, subject, html, from });
+    const smtpOptions = getSmtpOptions();
+    const emailFrom = from || getEmailFrom();
+    
+    console.log('📧 SMTP Host:', smtpOptions.host);
+    console.log('📧 SMTP Port:', smtpOptions.port);
+    console.log('📧 From:', emailFrom);
+    
+    const transporter = nodemailer.createTransport(smtpOptions);
+    
+    try {
+        const info = await transporter.sendMail({
+            from: emailFrom,
+            to,
+            subject,
+            html
+        });
+        console.log('✅ Email sent successfully:', info.messageId);
+        return info;
+    } catch (error) {
+        console.error('❌ Email sending failed:', error);
+        throw error;
+    }
 }
