@@ -2,6 +2,9 @@ import 'dotenv/config';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
+import YAML from 'yamljs';
+import path from 'path';
 
 import errorHandler from './_middleware/error-handler';
 import accountsController from './accounts/accounts.controller';
@@ -23,6 +26,10 @@ app.use(cors({
     credentials: true
 }));
 
+// Swagger setup
+const swaggerDocument = YAML.load(path.join(__dirname, '../swagger.yaml'));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 // routes
 app.use('/accounts', accountsController);
 
@@ -34,7 +41,7 @@ const port = process.env.PORT || 4000;
 
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
-    console.log(`Environment: process.env.NODE_ENV || 'development'`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     if (process.env.NODE_ENV === 'production' && corsOrigin) {
         console.log(`CORS allowed origins: ${corsOrigin}`);
     }
